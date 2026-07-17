@@ -5,6 +5,11 @@
 //! `tensor.data_ptr()`). All the ergonomics (DDP wrapper, launcher) live in the
 //! pure-Python SDK so they are easy to read and iterate on without recompiling.
 
+// The pyo3 0.22 method/function macros expand to code with an `.into()` on the
+// returned error; clippy attributes the resulting `useless_conversion` lint to
+// our function signatures. It's a macro-generated false positive, so silence it.
+#![allow(clippy::useless_conversion)]
+
 use gradsync_core as gs;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -58,11 +63,13 @@ impl Comm {
         self.inner.device()
     }
 
-    /// In-place float32 sum-AllReduce over a device buffer.
+    /// In-place float32 sum-AllReduce over a device buffer — **synchronous**.
     ///
     /// `ptr` is a CUDA device pointer as an int (e.g. `tensor.data_ptr()`),
     /// `count` the number of f32 elements. With `average=True` NCCL divides by the
-    /// world size — the usual choice for gradient averaging.
+    /// world size — the usual choice for gradient averaging. Enqueues on the
+    /// default stream and blocks until done. This is the naive DDP path; the
+    /// overlapped path uses `all_reduce_bucket_f32` on a dedicated stream instead.
     #[pyo3(signature = (ptr, count, average=true))]
     fn all_reduce_f32(&self, ptr: usize, count: usize, average: bool) -> PyResult<()> {
         let buf = gs::DeviceBuf {
@@ -70,18 +77,63 @@ impl Comm {
             count,
             dtype: gs::DType::F32,
         };
-        let op = if average { gs::RedOp::Avg } else { gs::RedOp::Sum };
-        gs::all_reduce(&self.inner, buf, op, std::ptr::null_mut()).map_err(map_err)
+        let op = if average {
+            gs::RedOp::Avg
+        } else {
+            gs::RedOp::Sum
+        };
+        let stream: gs::Stream = std::ptr::null_mut();
+        gs::all_reduce(&self.inner, buf, op, stream).map_err(map_err)?;
+        gs::sync_stream(stream).map_err(map_err)
     }
 
-    /// Broadcast a float32 device buffer from `root` to all ranks.
+    /// In-place float32 AllReduce over a **bucket** of tensors, fused into one
+    /// NCCL group op and enqueued on `stream` — **asynchronous** (no sync).
+    ///
+    /// `bufs` is a list of `(device_ptr, count)` pairs. `stream` is a raw
+    /// `cudaStream_t` as an int (pass `torch.cuda.Stream.cuda_stream`; `0` means
+    /// the default stream). The caller orders the stream via CUDA stream waits —
+    /// this is what allows the reduction to overlap with backward compute.
+    #[pyo3(signature = (bufs, average=true, stream=0))]
+    fn all_reduce_bucket_f32(
+        &self,
+        bufs: Vec<(usize, usize)>,
+        average: bool,
+        stream: usize,
+    ) -> PyResult<()> {
+        let device_bufs: Vec<gs::DeviceBuf> = bufs
+            .into_iter()
+            .map(|(ptr, count)| gs::DeviceBuf {
+                ptr: ptr as *mut c_void,
+                count,
+                dtype: gs::DType::F32,
+            })
+            .collect();
+        let op = if average {
+            gs::RedOp::Avg
+        } else {
+            gs::RedOp::Sum
+        };
+        gs::group_all_reduce(&self.inner, &device_bufs, op, stream as gs::Stream).map_err(map_err)
+    }
+
+    /// Block until all work on `stream` (a raw `cudaStream_t` int; `0` = default)
+    /// has completed.
+    #[pyo3(signature = (stream=0))]
+    fn sync_stream(&self, stream: usize) -> PyResult<()> {
+        gs::sync_stream(stream as gs::Stream).map_err(map_err)
+    }
+
+    /// Broadcast a float32 device buffer from `root` to all ranks — synchronous.
     fn broadcast_f32(&self, ptr: usize, count: usize, root: i32) -> PyResult<()> {
         let buf = gs::DeviceBuf {
             ptr: ptr as *mut c_void,
             count,
             dtype: gs::DType::F32,
         };
-        gs::broadcast(&self.inner, buf, root, std::ptr::null_mut()).map_err(map_err)
+        let stream: gs::Stream = std::ptr::null_mut();
+        gs::broadcast(&self.inner, buf, root, stream).map_err(map_err)?;
+        gs::sync_stream(stream).map_err(map_err)
     }
 }
 

@@ -37,9 +37,32 @@ Standard synchronous data parallelism:
    across nodes**. gradsync does not choose the transport — it *reports* it.
 3. **Broadcast weights.** DDP broadcasts rank 0's initial parameters so all ranks
    start identical.
-4. **Per-step AllReduce.** After `loss.backward()`, `sync_gradients()` runs an
-   in-place average-AllReduce over each gradient tensor's *device pointer*. No
-   host copies — the reduction is GPU-to-GPU.
+4. **Overlapped per-bucket AllReduce.** Parameters are grouped into ~25 MB
+   buckets in reverse order. An autograd hook fires when each parameter's grad is
+   ready; when a bucket completes, its fused in-place average-AllReduce is
+   enqueued on a dedicated **comm stream** (`ncclGroupStart/End`) *during*
+   backward, overlapping with the compute still running on the default stream. No
+   host copies — the reduction is GPU-to-GPU. `sync_gradients()` orders the
+   optimizer after the comm stream.
+
+## Stream ordering (why it's correct)
+
+The core's collectives are **enqueue-only** — they never synchronize. Ordering is
+the caller's job, done with CUDA stream waits so the two streams interleave safely:
+
+```
+backward (default/compute stream):  ... grad_k ready ──┐
+                                                        │ comm_stream.wait_stream(compute)
+comm stream:                          bucket AllReduce ─┘  (runs concurrently with
+                                                            remaining backward)
+sync_gradients():  compute.wait_stream(comm_stream)   # step waits for all reductions
+optimizer.step() (compute stream):                    ──► safe: grads fully reduced
+```
+
+`comm_stream.wait_stream(compute)` guarantees a bucket is never reduced before its
+gradient kernels finish; `compute.wait_stream(comm_stream)` guarantees weights are
+never updated mid-reduction. The Python DDP uses torch's stream primitives for
+this, so gradsync doesn't reimplement CUDA events.
 
 ## Why "you can't emulate NVLink" matters
 

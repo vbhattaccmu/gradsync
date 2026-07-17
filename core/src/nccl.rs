@@ -95,6 +95,12 @@ extern "C" {
 
     pub fn ncclGetErrorString(result: ncclResult_t) -> *const c_char;
 
+    // Group calls: everything enqueued between start and end is fused into a
+    // single NCCL operation. We wrap a bucket of per-tensor AllReduces in a group
+    // so one bucket == one network launch, no flatten/unflatten copies.
+    pub fn ncclGroupStart() -> ncclResult_t;
+    pub fn ncclGroupEnd() -> ncclResult_t;
+
     // CUDA runtime bits we need to synchronize after enqueuing a collective.
     pub fn cudaStreamSynchronize(stream: cudaStream_t) -> c_int;
     pub fn cudaSetDevice(device: c_int) -> c_int;

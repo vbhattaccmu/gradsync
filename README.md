@@ -94,21 +94,41 @@ link used NVLink (`P2P/NVLink`) or the network (`NET`).
 import gradsync
 
 comm  = gradsync.init_process_group()
-model = gradsync.DistributedDataParallel(model, comm)
+model = gradsync.DistributedDataParallel(model, comm)   # bucketed, overlapping DDP
 ...
-loss.backward()
-model.sync_gradients()   # NCCL AllReduce-average across every GPU/node
+loss.backward()          # each gradient bucket's AllReduce fires as it becomes ready
+model.sync_gradients()   # wait for the comm stream, then step
 optimizer.step()
 ```
+
+## Communication/compute overlap
+
+`DistributedDataParallel` doesn't wait for the whole backward pass to finish
+before reducing. It:
+
+1. Groups parameters into ~25 MB **buckets**, in reverse order (≈ the order
+   backward produces gradients).
+2. Registers an autograd hook on each parameter; when a bucket's last gradient is
+   ready, its **fused AllReduce fires immediately on a dedicated CUDA comm
+   stream** (one `ncclGroupStart/End` around the bucket, reduced in place — no
+   flatten copies), overlapping with the rest of the backward still running on the
+   default stream.
+3. `sync_gradients()` just makes the optimizer's stream wait for the comm stream.
+
+Ordering is done with CUDA stream waits (`comm_stream.wait_stream(compute)` before
+each bucket; `compute.wait_stream(comm_stream)` before the step), so gradients are
+never read before they're produced and weights are never updated mid-reduction.
+Pass `overlap=False` for the naive reduce-after-backward baseline to compare.
 
 ## Status / roadmap
 
 - [x] Rust core: rendezvous, AllReduce/Broadcast, topology reporting
 - [x] PyO3 bindings + Python SDK + torchrun-style launcher
 - [x] Terraform for an N-node GCP GPU cluster
+- [x] **Overlap: bucketed AllReduce fired during backward (comm/compute overlap)**
 - [ ] GPUDirect-TCPX flags for A3/H100 cross-node
-- [ ] Overlap: bucketed AllReduce during backward (comm/compute overlap)
 - [ ] AllGather / ReduceScatter for sharded (ZeRO-style) optimizers
+- [ ] `find_unused_parameters` support for models with conditional branches
 - [ ] Benchmarks: NVLink vs network bandwidth, scaling efficiency
 
 ## License

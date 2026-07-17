@@ -28,10 +28,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - run: python -m pip install --upgrade pip maturin
+      - run: python -m pip install --upgrade pip maturin pytest
       - name: Build wheel (stub mode)
         working-directory: bindings
         run: maturin build --release -o ../wheels
       - run: python -m pip install wheels/gradsync-*.whl
       - name: Import smoke test
         run: python -c "import gradsync; print('gradsync', gradsync.__version__)"
+      - name: Unit tests (bucketing, GPU-free)
+        run: pytest -q python/tests

@@ -77,7 +77,12 @@ impl Communicator {
                 let rc = nccl::ncclCommInitRank(&mut handle, world_size, id.0, rank);
                 check(rc)?;
             }
-            Ok(Communicator { handle, world_size, rank, device })
+            Ok(Communicator {
+                handle,
+                world_size,
+                rank,
+                device,
+            })
         }
         #[cfg(not(feature = "nccl"))]
         {
@@ -125,6 +130,9 @@ pub(crate) fn check(rc: nccl::ncclResult_t) -> Result<()> {
     }
     #[cfg(not(feature = "nccl"))]
     {
-        Err(Error::Nccl { code: rc, msg: "nccl feature disabled".into() })
+        Err(Error::Nccl {
+            code: rc,
+            msg: "nccl feature disabled".into(),
+        })
     }
 }

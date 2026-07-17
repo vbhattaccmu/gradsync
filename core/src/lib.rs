@@ -22,7 +22,9 @@ pub mod error;
 pub mod nccl;
 pub mod topology;
 
-pub use collectives::{all_reduce, broadcast, DType, DeviceBuf, RedOp};
+pub use collectives::{
+    all_reduce, broadcast, group_all_reduce, sync_stream, DType, DeviceBuf, RedOp, Stream,
+};
 pub use comm::{Communicator, UniqueId};
 pub use error::{Error, Result};
 

@@ -18,6 +18,7 @@ from .trainer import (
     init_process_group,
     DistributedDataParallel,
     all_reduce_grads,
+    plan_buckets,
     report_topology,
     Comm,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "init_process_group",
     "DistributedDataParallel",
     "all_reduce_grads",
+    "plan_buckets",
     "report_topology",
     "Comm",
 ]
