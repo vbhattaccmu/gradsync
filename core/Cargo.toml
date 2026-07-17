@@ -1,0 +1,21 @@
+[package]
+name = "gradsync-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Core collectives for gradsync: a thin, safe Rust layer over NCCL + CUDA."
+
+[lib]
+name = "gradsync_core"
+crate-type = ["rlib"]
+
+[dependencies]
+thiserror = "1"
+
+[features]
+# `nccl` links against a real libnccl/libcudart. It requires a CUDA + NCCL
+# toolchain and is only buildable on a GPU host. Without it, the crate compiles
+# in a stubbed mode so you can develop the SDK and topology logic on a laptop.
+default = []
+nccl = []

@@ -1,0 +1,20 @@
+[package]
+name = "gradsync-py"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "PyO3 bindings that expose gradsync-core as the `_gradsync` Python extension."
+
+[lib]
+name = "_gradsync"
+crate-type = ["cdylib"]
+
+[dependencies]
+gradsync-core = { path = "../core" }
+pyo3 = { version = "0.22", features = ["extension-module"] }
+
+[features]
+# Forwarded to gradsync-core. Build the wheel with `maturin build --features nccl`
+# on a GPU host to get real collectives.
+nccl = ["gradsync-core/nccl"]

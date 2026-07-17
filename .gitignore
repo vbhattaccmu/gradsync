@@ -1,0 +1,26 @@
+# Rust
+/target
+**/target
+Cargo.lock
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+/wheels/
+/dist/
+
+# Data / model artifacts
+/data/
+*.pt
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!example.tfvars
+
+# OS
+.DS_Store

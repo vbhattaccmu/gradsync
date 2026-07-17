@@ -1,0 +1,17 @@
+# Cargo workspace for gradsync.
+#
+# `core`     - the Rust core that wraps NCCL/CUDA and exposes collectives.
+# `bindings` - the PyO3 layer that turns the core into a Python extension module.
+[workspace]
+resolver = "2"
+members = ["core", "bindings"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/vbhattaccmu/gradsync"
+
+[profile.release]
+lto = true
+codegen-units = 1

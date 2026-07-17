@@ -1,0 +1,25 @@
+[build-system]
+requires = ["maturin>=1.5,<2"]
+build-backend = "maturin"
+
+[project]
+name = "gradsync"
+version = "0.1.0"
+description = "Multi-GPU data-parallel training over NCCL, with a Rust core and a Python SDK."
+readme = "../README.md"
+requires-python = ">=3.9"
+license = { text = "Apache-2.0" }
+authors = [{ name = "vbhattaccmu" }]
+keywords = ["nccl", "cuda", "distributed", "gpu", "allreduce", "data-parallel"]
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: 3",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+# The pure-Python SDK lives in ../python/gradsync and re-exports the compiled
+# `_gradsync` extension module built from bindings/src/lib.rs.
+[tool.maturin]
+python-source = "../python"
+module-name = "gradsync._gradsync"
+features = ["pyo3/extension-module"]
