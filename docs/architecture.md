@@ -1,83 +1,58 @@
 # Architecture
 
-gradsync is deliberately split so the *interesting* systems code is in auditable
-Rust and Python is a thin ergonomic shell. Nothing is torch-specific in the core.
+gradsync layers systems code (Rust) over an ergonomic Python shell. Nothing is torch-specific.
 
 ```
 ┌───────────────────────────────────────────────┐
-│  Python SDK  (python/gradsync/)                │  user writes their training loop
+│  Python SDK  (python/gradsync/)                │
 │    init_process_group()                        │
-│    DistributedDataParallel(model, comm)         │
-│    model.sync_gradients()                       │
+│    DistributedDataParallel(model, comm)        │
+│    model.sync_gradients()                      │
 ├───────────────────────────────────────────────┤
-│  PyO3 extension  (bindings/) -> _gradsync.so   │  Comm, all_reduce_f32, broadcast_f32
+│  PyO3 extension  (bindings/) -> _gradsync.so   │
 ├───────────────────────────────────────────────┤
 │  Rust core  (core/)                            │
-│    comm.rs        rendezvous + ncclComm_t       │
-│    collectives.rs allreduce / broadcast         │
-│    topology.rs    parse `nvidia-smi topo -m`    │
-│    nccl.rs        raw FFI to <nccl.h>           │
+│    • comm.rs        rendezvous + NCCL          │
+│    • collectives.rs AllReduce / Broadcast      │
+│    • topology.rs    hardware detection         │
+│    • nccl.rs        FFI to <nccl.h>            │
 ├───────────────────────────────────────────────┤
-│  NCCL + CUDA  (libnccl, libcudart)             │
+│  NCCL + CUDA  (GPU compute + communication)   │
 └───────────────────────────────────────────────┘
-
-Infra:  infra/terraform/  ->  N GPU VMs on a private VPC on GCP
 ```
 
-## The distributed mechanism
+## Distributed mechanism
 
-Standard synchronous data parallelism:
+1. **Rendezvous** — Rank 0 creates NCCL unique id, broadcasts over TCP
+2. **Communicator init** — NCCL probes fabric, picks NVLink (inside node) or network (across nodes)
+3. **Broadcast weights** — All ranks sync initial parameters
+4. **Overlapped AllReduce** — Parameters bucketed (~25 MB). Autograd hooks fire during backward, enqueue AllReduce on comm stream while compute continues. No host copies.
 
-1. **Rendezvous.** Rank 0 mints a 128-byte NCCL unique id and serves it over TCP
-   to every other rank (`python/gradsync/launch.py`). This is the only
-   out-of-band step; after it, NCCL builds its own transports.
-2. **Communicator init.** Every rank calls `ncclCommInitRank`. NCCL probes the
-   fabric and picks the fastest path between each pair of ranks on its own:
-   **NVLink/NVSwitch inside a node**, **network (GPUDirect-TCPX / RoCE / IB)
-   across nodes**. gradsync does not choose the transport — it *reports* it.
-3. **Broadcast weights.** DDP broadcasts rank 0's initial parameters so all ranks
-   start identical.
-4. **Overlapped per-bucket AllReduce.** Parameters are grouped into ~25 MB
-   buckets in reverse order. An autograd hook fires when each parameter's grad is
-   ready; when a bucket completes, its fused in-place average-AllReduce is
-   enqueued on a dedicated **comm stream** (`ncclGroupStart/End`) *during*
-   backward, overlapping with the compute still running on the default stream. No
-   host copies — the reduction is GPU-to-GPU. `sync_gradients()` orders the
-   optimizer after the comm stream.
+## Stream ordering
 
-## Stream ordering (why it's correct)
-
-The core's collectives are **enqueue-only** — they never synchronize. Ordering is
-the caller's job, done with CUDA stream waits so the two streams interleave safely:
+Correctness relies on CUDA stream waits:
 
 ```
-backward (default/compute stream):  ... grad_k ready ──┐
-                                                        │ comm_stream.wait_stream(compute)
-comm stream:                          bucket AllReduce ─┘  (runs concurrently with
-                                                            remaining backward)
-sync_gradients():  compute.wait_stream(comm_stream)   # step waits for all reductions
-optimizer.step() (compute stream):                    ──► safe: grads fully reduced
+backward (default stream):      ... grad_k ──┐
+                                             │ comm_stream.wait_stream(compute)
+comm stream:                  AllReduce ─────┘  (runs concurrently)
+
+sync_gradients():  compute.wait_stream(comm_stream)
+optimizer.step():                         ──► safe: grads fully reduced
 ```
 
-`comm_stream.wait_stream(compute)` guarantees a bucket is never reduced before its
-gradient kernels finish; `compute.wait_stream(comm_stream)` guarantees weights are
-never updated mid-reduction. The Python DDP uses torch's stream primitives for
-this, so gradsync doesn't reimplement CUDA events.
-
-## Why "you can't emulate NVLink" matters
-
-NVLink and NVSwitch are physical interconnect. You get them by renting a
-multi-GPU box (A100/H100). gradsync's honest claim is: it drives real NCCL
-collectives, uses NVLink automatically when the hardware has it, and uses the
-network across nodes. `report_topology()` and `NCCL_DEBUG=INFO` let a run *prove*
-which path each link took, rather than pretending to simulate the fabric.
+- `comm_stream.wait_stream(compute)` → AllReduce doesn't start early
+- `compute.wait_stream(comm_stream)` → Optimizer doesn't start early
 
 ## Build modes
 
-| Mode | Command | Collectives | Where |
-|------|---------|-------------|-------|
-| stub | `cargo build` | return `StubBuild` error | any laptop |
-| real | `maturin build --features nccl` | run on NCCL | GPU host w/ CUDA+NCCL |
+| Mode | Command | Collectives work? | Location |
+|------|---------|-------------------|----------|
+| Stub | `cargo build` | No (error) | Laptop (no GPU) |
+| Real | `maturin build --features nccl` | Yes | GPU host (CUDA + NCCL) |
 
-Stub mode exists so the SDK, launcher, rendezvous, and topology parser can be
-developed and unit-tested without a GPU. The collectives light up on a GPU host.
+Stub mode lets you develop rendezvous, topology parsing, and Python SDK without a GPU. Collectives light up on GPU.
+
+## Why we don't emulate NVLink
+
+NVLink is physical hardware. We don't pretend to simulate it — we use the real thing when available. `report_topology()` and `NCCL_DEBUG=INFO` prove which path (NVLink vs network) each collective took.
