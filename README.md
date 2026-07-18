@@ -2,7 +2,7 @@
 
 **Production-grade multi-GPU data-parallel training over NCCL — Rust core with communication/compute overlap, Python SDK, and one Terraform command to a GPU cluster.**
 
-> A small, auditable, production-ready implementation of data-parallel training. Every line is readable Rust or plain Python; no black boxes.
+> A small, auditable, production-ready implementation of data-parallel training library. Every line is readable Rust or plain Python; no black boxes.
 
 ## What is this?
 
