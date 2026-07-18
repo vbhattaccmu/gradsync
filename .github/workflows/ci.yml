@@ -36,4 +36,4 @@ jobs:
       - name: Import smoke test
         run: python -c "import gradsync; print('gradsync', gradsync.__version__)"
       - name: Unit tests (bucketing, GPU-free)
-        run: pytest -q python/tests
+        run: pytest -q --tb=short python/tests/
