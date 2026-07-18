@@ -257,7 +257,7 @@ If you use gradsync for research or education, please cite:
 
 ```bibtex
 @software{gradsync2026,
-  author={Bhatt, Vikram},
+  author={Bhattacharjee, Vikram},
   title={gradsync: Production-grade multi-GPU data-parallel training over NCCL},
   year={2026},
   url={https://github.com/vbhattaccmu/gradsync}
