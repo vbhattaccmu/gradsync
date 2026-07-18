@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gradsync Architecture</title>
+  <style>
+    :root {
+      --bg: #0f0f0f;
+      --bg-secondary: #1a1a1a;
+      --text: #f0f0f0;
+      --text-secondary: #a0a0a0;
+      --accent: #2563eb;
+      --accent-dark: #1d4ed8;
+      --compute: #60a5fa;
+      --comm: #fbbf24;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .nav {
+      padding: 1.5rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      position: sticky;
+      top: 0;
+      background: rgba(15, 15, 15, 0.95);
+      backdrop-filter: blur(10px);
+      z-index: 10;
+    }
+
+    .nav-content {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-title {
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+
+    .nav-back {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    .nav-back:hover {
+      opacity: 0.7;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      letter-spacing: -0.02em;
+    }
+
+    .intro {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      margin-bottom: 3rem;
+      max-width: 700px;
+    }
+
+    h2 {
+      font-size: 1.8rem;
+      margin-top: 3rem;
+      margin-bottom: 1.5rem;
+      border-bottom: 2px solid var(--accent);
+      padding-bottom: 0.5rem;
+    }
+
+    h3 {
+      font-size: 1.2rem;
+      margin-top: 1.5rem;
+      margin-bottom: 1rem;
+      color: var(--accent);
+    }
+
+    p {
+      margin-bottom: 1rem;
+      color: var(--text-secondary);
+    }
+
+    .diagram {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      border-radius: 8px;
+      padding: 2rem;
+      margin: 2rem 0;
+      font-family: "Monaco", "Courier New", monospace;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    .box {
+      background: rgba(37, 99, 235, 0.1);
+      border-left: 4px solid var(--accent);
+      padding: 1.5rem;
+      margin: 1.5rem 0;
+      border-radius: 4px;
+    }
+
+    .box strong {
+      color: var(--accent);
+    }
+
+    ol {
+      margin-left: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    li {
+      margin-bottom: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .stream-diagram {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      border-radius: 8px;
+      padding: 2rem;
+      margin: 2rem 0;
+      font-family: "Monaco", "Courier New", monospace;
+      overflow-x: auto;
+    }
+
+    .stream-line {
+      margin-bottom: 1rem;
+      display: flex;
+      gap: 1rem;
+      font-size: 0.9rem;
+    }
+
+    .stream-label {
+      min-width: 180px;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .stream-content {
+      flex: 1;
+      color: var(--text);
+    }
+
+    .stream-content .compute {
+      color: var(--compute);
+    }
+
+    .stream-content .comm {
+      color: var(--comm);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 2rem 0;
+      background: var(--bg-secondary);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th {
+      background: rgba(37, 99, 235, 0.15);
+      padding: 1rem;
+      text-align: left;
+      font-weight: 600;
+      color: var(--accent);
+      border-bottom: 1px solid rgba(37, 99, 235, 0.2);
+    }
+
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid rgba(37, 99, 235, 0.1);
+      color: var(--text-secondary);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    code {
+      background: rgba(37, 99, 235, 0.1);
+      padding: 0.2rem 0.6rem;
+      border-radius: 3px;
+      font-family: "Monaco", "Courier New", monospace;
+      color: var(--compute);
+    }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .card {
+      background: var(--bg-secondary);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      padding: 1.5rem;
+      border-radius: 8px;
+    }
+
+    .card-title {
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-desc {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+    }
+
+    .footer {
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      text-align: center;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 2rem 1rem;
+      }
+
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      h2 {
+        font-size: 1.4rem;
+      }
+
+      .diagram, .stream-diagram {
+        font-size: 0.8rem;
+        padding: 1rem;
+      }
+
+      .nav-content {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .nav-title {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <div class="nav-content">
+      <div class="nav-title">gradsync Architecture</div>
+      <a href="index.html" class="nav-back">← Back to home</a>
+    </div>
+  </div>
+
+  <div class="container">
+    <h1>Architecture</h1>
+    <p class="intro">gradsync layers systems code (Rust) over an ergonomic Python shell. Nothing is torch-specific.</p>
+
+    <div class="diagram">┌───────────────────────────────────────────────┐
+│  Python SDK  (python/gradsync/)                │
+│    init_process_group()                        │
+│    DistributedDataParallel(model, comm)        │
+│    model.sync_gradients()                      │
+├───────────────────────────────────────────────┤
+│  PyO3 extension  (bindings/) → _gradsync.so    │
+├───────────────────────────────────────────────┤
+│  Rust core  (core/)                            │
+│    • comm.rs        rendezvous + NCCL          │
+│    • collectives.rs AllReduce / Broadcast      │
+│    • topology.rs    hardware detection         │
+│    • nccl.rs        FFI to &lt;nccl.h&gt;            │
+├───────────────────────────────────────────────┤
+│  NCCL + CUDA  (GPU compute + communication)   │
+└───────────────────────────────────────────────┘</div>
+
+    <h2>How it works</h2>
+
+    <h3>1. Rendezvous</h3>
+    <p>Rank 0 creates a 128-byte NCCL unique id and broadcasts it over TCP to every other rank. After this handshake, NCCL builds its own transports.</p>
+
+    <h3>2. Communicator init</h3>
+    <p>Every rank calls <code>ncclCommInitRank</code>. NCCL automatically probes the hardware fabric and picks the fastest path:</p>
+    <ul style="margin-left: 1.5rem; color: var(--text-secondary);">
+      <li><strong>Inside a node:</strong> NVLink / NVSwitch</li>
+      <li><strong>Across nodes:</strong> Network (GPUDirect-TCPX / RoCE / InfiniBand)</li>
+    </ul>
+    <p style="margin-top: 1rem;">gradsync doesn't choose the transport — it <strong>reports</strong> which one was chosen.</p>
+
+    <h3>3. Broadcast weights</h3>
+    <p>DDP broadcasts rank 0's initial parameters so all ranks start with identical weights.</p>
+
+    <h3>4. Overlapped AllReduce</h3>
+    <p>Parameters are grouped into ~25 MB buckets in reverse order. An autograd hook fires when each parameter's gradient is ready. When a bucket completes, its fused in-place average-AllReduce is enqueued on a dedicated <strong>comm stream</strong> during backward, overlapping with compute still running on the default stream. No host copies — the reduction is GPU-to-GPU.</p>
+
+    <h2>Stream ordering (why it's correct)</h2>
+
+    <p>The core's collectives are <strong>enqueue-only</strong> — they never synchronize. Ordering is the caller's job, done with CUDA stream waits so the two streams interleave safely:</p>
+
+    <div class="stream-diagram">
+      <div class="stream-line">
+        <div class="stream-label">backward (compute):</div>
+        <div class="stream-content"><span class="compute">... grad_k ready ──┐</span></div>
+      </div>
+      <div class="stream-line">
+        <div class="stream-label"></div>
+        <div class="stream-content" style="color: var(--text-secondary);">│ comm_stream.wait_stream(compute)</div>
+      </div>
+      <div class="stream-line">
+        <div class="stream-label">comm stream:</div>
+        <div class="stream-content"><span class="comm">AllReduce ─────────┘</span> <span style="color: var(--text-secondary);">(runs concurrently)</span></div>
+      </div>
+      <div class="stream-line">
+        <div class="stream-label"></div>
+        <div class="stream-content"></div>
+      </div>
+      <div class="stream-line">
+        <div class="stream-label">sync_gradients():</div>
+        <div class="stream-content">compute.wait_stream(comm_stream)</div>
+      </div>
+      <div class="stream-line">
+        <div class="stream-label">optimizer.step():</div>
+        <div class="stream-content"><span style="color: var(--accent);">──► safe: grads fully reduced</span></div>
+      </div>
+    </div>
+
+    <div class="section-grid">
+      <div class="card">
+        <div class="card-title">↓ Compute waits for comm</div>
+        <div class="card-desc"><code>comm_stream.wait_stream(compute)</code> guarantees AllReduce never starts before gradient kernels finish.</div>
+      </div>
+      <div class="card">
+        <div class="card-title">↓ Optimizer waits for comm</div>
+        <div class="card-desc"><code>compute.wait_stream(comm_stream)</code> guarantees weights never update mid-reduction.</div>
+      </div>
+    </div>
+
+    <h2>Build modes</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Mode</th>
+          <th>Command</th>
+          <th>Collectives?</th>
+          <th>Location</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Stub</strong></td>
+          <td><code>cargo build</code></td>
+          <td>No (error)</td>
+          <td>Laptop (no GPU)</td>
+        </tr>
+        <tr>
+          <td><strong>Real</strong></td>
+          <td><code>maturin build --features nccl</code></td>
+          <td>Yes</td>
+          <td>GPU host (CUDA + NCCL)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="box">
+      <strong>Why stub mode?</strong> It lets you develop rendezvous, topology parsing, and the Python SDK without a GPU. Collectives light up when you build on a GPU host with CUDA + NCCL.
+    </div>
+
+    <h2>Why we don't emulate NVLink</h2>
+
+    <p>NVLink and NVSwitch are <strong>physical interconnect hardware</strong>. You get them by renting a multi-GPU box (A100/H100). gradsync's honest claim is:</p>
+
+    <ul style="margin-left: 1.5rem;">
+      <li style="color: var(--text-secondary);">It drives <strong>real NCCL collectives</strong></li>
+      <li style="color: var(--text-secondary);">Uses NVLink automatically when hardware has it</li>
+      <li style="color: var(--text-secondary);">Uses the network across nodes</li>
+      <li style="color: var(--text-secondary);"><code>report_topology()</code> and <code>NCCL_DEBUG=INFO</code> prove which path each collective took</li>
+    </ul>
+
+    <p style="margin-top: 1.5rem;">We don't pretend to simulate hardware we can't control.</p>
+
+    <div class="footer">
+      <p>gradsync • <a href="https://github.com/vbhattaccmu/gradsync" style="color: var(--accent);">GitHub</a></p>
+    </div>
+  </div>
+</body>
+</html>
