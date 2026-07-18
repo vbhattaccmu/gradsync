@@ -35,9 +35,16 @@ from __future__ import annotations
 import os
 import subprocess
 from dataclasses import dataclass
-from typing import List, Sequence, Tuple
+from typing import List, Sequence, Tuple, Optional
 
-from . import _gradsync  # compiled Rust extension
+# Optional import of the compiled Rust extension. In stub mode (no NCCL),
+# this will fail gracefully and return None. Actual AllReduce calls will error,
+# but pure Python logic (bucketing, overlap planning) works for testing.
+try:
+    from . import _gradsync
+except ImportError:
+    _gradsync = None  # type: ignore
+
 from .launch import exchange_unique_id
 
 # f32 elements per MB, used to turn a bucket size in MB into an element count.
