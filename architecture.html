@@ -353,32 +353,56 @@
 
     <p>The core's collectives are <strong>enqueue-only</strong> — they never synchronize. Ordering is the caller's job, done with CUDA stream waits so the two streams interleave safely:</p>
 
-    <div class="stream-diagram">
-      <div class="stream-line">
-        <div class="stream-label">backward (compute):</div>
-        <div class="stream-content"><span class="compute">... grad_k ready ──┐</span></div>
-      </div>
-      <div class="stream-line">
-        <div class="stream-label"></div>
-        <div class="stream-content" style="color: var(--text-secondary);">│ comm_stream.wait_stream(compute)</div>
-      </div>
-      <div class="stream-line">
-        <div class="stream-label">comm stream:</div>
-        <div class="stream-content"><span class="comm">AllReduce ─────────┘</span> <span style="color: var(--text-secondary);">(runs concurrently)</span></div>
-      </div>
-      <div class="stream-line">
-        <div class="stream-label"></div>
-        <div class="stream-content"></div>
-      </div>
-      <div class="stream-line">
-        <div class="stream-label">sync_gradients():</div>
-        <div class="stream-content">compute.wait_stream(comm_stream)</div>
-      </div>
-      <div class="stream-line">
-        <div class="stream-label">optimizer.step():</div>
-        <div class="stream-content"><span style="color: var(--accent);">──► safe: grads fully reduced</span></div>
-      </div>
-    </div>
+    <svg viewBox="0 0 700 300" style="width: 100%; max-width: 700px; margin: 2rem 0; background: var(--bg-secondary); border-radius: 8px; padding: 20px; border: 1px solid rgba(37, 99, 235, 0.2);">
+      <!-- Compute Stream (top) -->
+      <text x="20" y="30" font-size="13" font-weight="600" fill="var(--compute)">Compute Stream (default)</text>
+      <rect x="20" y="45" width="120" height="40" fill="rgba(96, 165, 250, 0.2)" stroke="var(--compute)" stroke-width="2" rx="4"/>
+      <text x="30" y="72" font-size="12" fill="var(--compute)">Backward</text>
+
+      <line x="140" y="65" x2="200" y2="65" stroke="var(--compute)" stroke-width="2" marker-end="url(#arrow-compute)"/>
+
+      <rect x="200" y="45" width="120" height="40" fill="rgba(96, 165, 250, 0.2)" stroke="var(--compute)" stroke-width="2" rx="4"/>
+      <text x="210" y="72" font-size="12" fill="var(--compute)">grad_k ready</text>
+
+      <line x="320" y="65" x2="400" y2="65" stroke="var(--compute)" stroke-width="2" marker-end="url(#arrow-compute)"/>
+
+      <rect x="400" y="45" width="120" height="40" fill="rgba(96, 165, 250, 0.2)" stroke="var(--compute)" stroke-width="2" rx="4"/>
+      <text x="410" y="72" font-size="12" fill="var(--compute)">Sync grads</text>
+
+      <line x="520" y="65" x2="580" y2="65" stroke="var(--compute)" stroke-width="2" marker-end="url(#arrow-compute)"/>
+
+      <rect x="580" y="45" width="100" height="40" fill="rgba(96, 165, 250, 0.2)" stroke="var(--compute)" stroke-width="2" rx="4"/>
+      <text x="590" y="72" font-size="12" fill="var(--compute)">Step</text>
+
+      <!-- Communication Stream (middle) -->
+      <text x="20" y="135" font-size="13" font-weight="600" fill="var(--comm)">Comm Stream</text>
+      <rect x="200" y="150" width="120" height="40" fill="rgba(251, 191, 36, 0.2)" stroke="var(--comm)" stroke-width="2" rx="4"/>
+      <text x="210" y="177" font-size="12" fill="var(--comm)">AllReduce</text>
+
+      <line x="320" y="170" x2="400" y2="170" stroke="var(--comm)" stroke-width="2" marker-end="url(#arrow-comm)"/>
+
+      <text x="410" y="177" font-size="12" fill="var(--text-secondary)" font-style="italic">(done or in flight)</text>
+
+      <!-- Wait lines (synchronization) -->
+      <line x="200" y="85" x2="200" y2="150" stroke="rgba(239, 68, 68, 0.3)" stroke-width="2" stroke-dasharray="5,5"/>
+      <text x="130" y="120" font-size="11" fill="#f87171">wait_stream</text>
+
+      <line x="400" y="85" x2="400" y2="150" stroke="rgba(239, 68, 68, 0.3)" stroke-width="2" stroke-dasharray="5,5"/>
+      <text x="330" y="120" font-size="11" fill="#f87171">wait_stream</text>
+
+      <!-- Legend -->
+      <text x="20" y="260" font-size="12" fill="var(--text-secondary)">✓ Ordering guarantees: backward doesn't overlap AllReduce · optimizer doesn't start until AllReduce done</text>
+
+      <!-- Arrow markers -->
+      <defs>
+        <marker id="arrow-compute" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="rgba(96, 165, 250, 0.6)"/>
+        </marker>
+        <marker id="arrow-comm" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="rgba(251, 191, 36, 0.6)"/>
+        </marker>
+      </defs>
+    </svg>
 
     <div class="section-grid">
       <div class="card">
