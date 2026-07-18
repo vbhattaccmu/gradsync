@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gradsync: Communication/Compute Overlap</title>
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f7f5;
+      --text-primary: #1a1a1a;
+      --text-secondary: #666666;
+      --border: #e0ddd8;
+      --compute: #2563eb;
+      --comm: #d97706;
+      --idle: #ef4444;
+      --neutral-light: #d1d5db;
+      --accent: #2563eb;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #0f0f0f;
+        --bg-secondary: #1a1a1a;
+        --text-primary: #f0f0f0;
+        --text-secondary: #a0a0a0;
+        --border: #333333;
+        --compute: #60a5fa;
+        --comm: #fbbf24;
+        --idle: #f87171;
+        --neutral-light: #4b5563;
+      }
+    }
+
+    :root[data-theme="light"] {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f8f7f5;
+      --text-primary: #1a1a1a;
+      --text-secondary: #666666;
+      --border: #e0ddd8;
+      --compute: #2563eb;
+      --comm: #d97706;
+      --idle: #ef4444;
+      --neutral-light: #d1d5db;
+    }
+
+    :root[data-theme="dark"] {
+      --bg-primary: #0f0f0f;
+      --bg-secondary: #1a1a1a;
+      --text-primary: #f0f0f0;
+      --text-secondary: #a0a0a0;
+      --border: #333333;
+      --compute: #60a5fa;
+      --comm: #fbbf24;
+      --idle: #f87171;
+      --neutral-light: #4b5563;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      padding: 3rem 2rem;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 3rem;
+      text-align: center;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: var(--text-secondary);
+      font-size: 1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    button {
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      background: var(--compute);
+      color: white;
+      border-color: var(--compute);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .timeline-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .timeline {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1.5rem;
+    }
+
+    .timeline-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 1.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+    }
+
+    .timeline-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+      font-weight: 400;
+    }
+
+    .phases {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .phase-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .phase-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+
+    .phase-bar {
+      display: flex;
+      height: 32px;
+      background: var(--bg-primary);
+      border-radius: 3px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .phase-segment {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 600;
+      color: white;
+      font-family: "Monaco", "Courier New", monospace;
+      transition: width 0.05s linear;
+    }
+
+    .segment-compute {
+      background: var(--compute);
+    }
+
+    .segment-comm {
+      background: var(--comm);
+    }
+
+    .segment-idle {
+      background: var(--idle);
+      opacity: 0.3;
+    }
+
+    .segment-hidden {
+      background: var(--neutral-light);
+      opacity: 0.2;
+    }
+
+    .timeline-info {
+      display: flex;
+      justify-content: space-between;
+      padding: 1rem;
+      background: var(--bg-primary);
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .info-label {
+      color: var(--text-secondary);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .info-value {
+      font-family: "Monaco", "Courier New", monospace;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 3rem;
+      padding: 1.5rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+    }
+
+    .legend-box {
+      width: 16px;
+      height: 16px;
+      border-radius: 2px;
+    }
+
+    .legend-compute { background: var(--compute); }
+    .legend-comm { background: var(--comm); }
+    .legend-idle { background: var(--idle); opacity: 0.3; }
+
+    .benefit-box {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: var(--compute);
+      color: white;
+      border-radius: 6px;
+      text-align: center;
+    }
+
+    .benefit-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      opacity: 0.9;
+      margin-bottom: 0.5rem;
+    }
+
+    .benefit-value {
+      font-size: 2rem;
+      font-weight: 600;
+      font-family: "Monaco", "Courier New", monospace;
+    }
+
+    @media (max-width: 768px) {
+      .timeline-container {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+      }
+
+      .legend {
+        grid-template-columns: 1fr;
+      }
+
+      body {
+        padding: 1.5rem 1rem;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .phase-segment {
+        transition: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo-container">
+        <div class="logo">
+          <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+            <!-- Left compute stream (blue) -->
+            <rect x="8" y="8" width="12" height="28" rx="2" fill="var(--compute)" opacity="0.9"/>
+
+            <!-- Right communication stream (amber) overlapping -->
+            <rect x="28" y="12" width="12" height="24" rx="2" fill="var(--comm)" opacity="0.8"/>
+
+            <!-- Center overlap indicator (showing hidden communication) -->
+            <circle cx="24" cy="24" r="3" fill="var(--text-primary)" opacity="0.4"/>
+
+            <!-- Flow arrows -->
+            <path d="M 14 38 L 20 42 L 14 42 Z" fill="var(--compute)" opacity="0.6"/>
+            <path d="M 34 38 L 40 42 L 34 42 Z" fill="var(--comm)" opacity="0.6"/>
+          </svg>
+        </div>
+        <h1>gradsync</h1>
+      </div>
+      <p class="subtitle">How overlapping gradient reduction with backward compute reduces training step latency by 30–50%</p>
+    </div>
+
+    <div class="controls">
+      <button id="playBtn">▶ Play</button>
+      <button id="resetBtn">↻ Reset</button>
+      <button id="speedBtn">1× Speed</button>
+    </div>
+
+    <div class="timeline-container">
+      <!-- Naive approach -->
+      <div class="timeline">
+        <div>
+          <div class="timeline-title">Naive DDP</div>
+          <div class="timeline-subtitle">Sequential phases — communication blocks compute</div>
+        </div>
+
+        <div class="phases">
+          <div class="phase-group">
+            <div class="phase-label">Backward pass (GPU compute)</div>
+            <div class="phase-bar">
+              <div class="phase-segment segment-compute" id="naive-backward" style="width: 0%">30%</div>
+            </div>
+          </div>
+
+          <div class="phase-group">
+            <div class="phase-label">AllReduce (communication)</div>
+            <div class="phase-bar">
+              <div class="phase-segment segment-comm" id="naive-allreduce" style="width: 0%">20%</div>
+            </div>
+          </div>
+
+          <div class="phase-group">
+            <div class="phase-label">Optimizer step</div>
+            <div class="phase-bar">
+              <div class="phase-segment segment-compute" id="naive-step" style="width: 0%">10%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-info">
+          <div class="info-item">
+            <span class="info-label">Total step time</span>
+            <span class="info-value" id="naive-total">0 ms</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Communication</span>
+            <span class="info-value" id="naive-comm-time">0 ms</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- gradsync approach -->
+      <div class="timeline">
+        <div>
+          <div class="timeline-title">gradsync (Overlapped)</div>
+          <div class="timeline-subtitle">Backward + AllReduce in parallel on separate GPU streams</div>
+        </div>
+
+        <div class="phases">
+          <div class="phase-group">
+            <div class="phase-label">Backward + AllReduce (parallel)</div>
+            <div class="phase-bar">
+              <div class="phase-segment segment-compute" id="overlap-backward" style="width: 0%">30%</div>
+              <div class="phase-segment segment-comm" id="overlap-allreduce" style="width: 0%">15%</div>
+              <div class="phase-segment segment-hidden" id="overlap-hidden" style="width: 0%">5%</div>
+            </div>
+          </div>
+
+          <div class="phase-group">
+            <div class="phase-label">Optimizer step</div>
+            <div class="phase-bar">
+              <div class="phase-segment segment-compute" id="overlap-step" style="width: 0%">10%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-info">
+          <div class="info-item">
+            <span class="info-label">Total step time</span>
+            <span class="info-value" id="overlap-total">0 ms</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Speedup</span>
+            <span class="info-value" id="speedup">0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-box legend-compute"></div>
+        <span>GPU Compute (backward)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box legend-comm"></div>
+        <span>Communication (AllReduce)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box legend-idle"></div>
+        <span>Idle (waiting)</span>
+      </div>
+    </div>
+
+    <div class="benefit-box">
+      <div class="benefit-title">Step time reduction with overlap</div>
+      <div class="benefit-value" id="benefit">—</div>
+    </div>
+  </div>
+
+  <script>
+    const DURATION = 6000; // 6 seconds total
+    const PHASES = {
+      backward: 30,    // 30% of time unit
+      allreduce: 20,   // 20% of time unit
+      step: 10         // 10% of time unit
+    };
+
+    let isPlaying = false;
+    let progress = 0;
+    let speed = 1;
+    let animationId = null;
+    let lastTime = 0;
+
+    const playBtn = document.getElementById('playBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const speedBtn = document.getElementById('speedBtn');
+
+    playBtn.addEventListener('click', togglePlay);
+    resetBtn.addEventListener('click', reset);
+    speedBtn.addEventListener('click', changeSpeed);
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      playBtn.textContent = isPlaying ? '⏸ Pause' : '▶ Play';
+      if (isPlaying) {
+        lastTime = performance.now();
+        animate();
+      } else {
+        cancelAnimationFrame(animationId);
+      }
+    }
+
+    function reset() {
+      isPlaying = false;
+      progress = 0;
+      playBtn.textContent = '▶ Play';
+      cancelAnimationFrame(animationId);
+      update();
+    }
+
+    function changeSpeed() {
+      const speeds = [1, 1.5, 2];
+      const idx = speeds.indexOf(speed);
+      speed = speeds[(idx + 1) % speeds.length];
+      speedBtn.textContent = `${speed}× Speed`;
+    }
+
+    function animate() {
+      const now = performance.now();
+      const delta = now - lastTime;
+      lastTime = now;
+
+      progress = Math.min(progress + delta * speed / DURATION, 1);
+      update();
+
+      if (progress < 1) {
+        animationId = requestAnimationFrame(animate);
+      } else {
+        isPlaying = false;
+        playBtn.textContent = '▶ Play';
+      }
+    }
+
+    function update() {
+      // Naive timeline
+      const naiveBackwardEnd = PHASES.backward;
+      const naiveAllReduceEnd = naiveBackwardEnd + PHASES.allreduce;
+      const naiveTotalEnd = naiveAllReduceEnd + PHASES.step;
+
+      const naiveBackwardPct = Math.min(progress * 100, naiveBackwardEnd);
+      const naiveAllReducePct = Math.max(0, Math.min(progress * 100 - naiveBackwardEnd, PHASES.allreduce));
+      const naiveStepPct = Math.max(0, Math.min(progress * 100 - naiveAllReduceEnd, PHASES.step));
+
+      updateBar('naive-backward', naiveBackwardPct, PHASES.backward);
+      updateBar('naive-allreduce', naiveAllReducePct, PHASES.allreduce);
+      updateBar('naive-step', naiveStepPct, PHASES.step);
+
+      const naiveTotalTime = (naiveTotalEnd / 100) * DURATION;
+
+      // Overlapped timeline
+      const overlapBackwardEnd = PHASES.backward;
+      const overlapAllReduceEnd = Math.min(PHASES.backward + PHASES.allreduce, PHASES.backward + PHASES.allreduce * 0.75);
+      const overlapTotalEnd = overlapAllReduceEnd + PHASES.step;
+
+      const overlapBackwardPct = Math.min(progress * 100, PHASES.backward);
+      const overlapAllReducePct = Math.max(0, Math.min(progress * 100 - (PHASES.backward - PHASES.allreduce * 0.25), PHASES.allreduce * 0.75));
+      const overlapHiddenPct = Math.max(0, Math.min(progress * 100 - PHASES.backward, Math.min(PHASES.allreduce * 0.25, (progress * 100 - PHASES.backward))));
+      const overlapStepPct = Math.max(0, Math.min(progress * 100 - overlapAllReduceEnd, PHASES.step));
+
+      updateBar('overlap-backward', overlapBackwardPct, PHASES.backward);
+      updateBar('overlap-allreduce', overlapAllReducePct, PHASES.allreduce * 0.75);
+      updateBar('overlap-hidden', overlapHiddenPct, Math.min(PHASES.allreduce * 0.25, progress * 100 - PHASES.backward));
+      updateBar('overlap-step', overlapStepPct, PHASES.step);
+
+      const overlapTotalTime = (overlapTotalEnd / 100) * DURATION;
+
+      // Update times
+      const naiveMs = Math.round(naiveTotalTime);
+      const overlapMs = Math.round(overlapTotalTime);
+      const speedupMs = Math.round(naiveMs - overlapMs);
+      const speedupPct = naiveMs > 0 ? Math.round((speedupMs / naiveMs) * 100) : 0;
+
+      document.getElementById('naive-total').textContent = `${naiveMs} ms`;
+      document.getElementById('naive-comm-time').textContent = `${Math.round((PHASES.allreduce / 100) * DURATION)} ms`;
+      document.getElementById('overlap-total').textContent = `${overlapMs} ms`;
+      document.getElementById('speedup').textContent = speedupPct > 0 ? `${speedupPct}% faster` : '—';
+      document.getElementById('benefit').textContent = speedupMs > 0 ? `${speedupMs} ms saved per step` : '—';
+    }
+
+    function updateBar(elementId, currentPct, maxPct) {
+      const el = document.getElementById(elementId);
+      const width = (currentPct / maxPct) * 100;
+      el.style.width = Math.max(0, Math.min(width, 100)) + '%';
+      if (width > 10 && el.textContent.match(/\d+%/)) {
+        el.textContent = Math.round((currentPct / 100) * (DURATION / 10)) + '%';
+      }
+    }
+
+    // Initial render
+    update();
+  </script>
+</body>
+</html>
