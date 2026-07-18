@@ -23,4 +23,4 @@ classifiers = [
 python-source = "../python"
 module-name = "gradsync._gradsync"
 features = ["pyo3/extension-module"]
-include = ["../python/gradsync/*.py", "../python/gradsync/py.typed"]
+include = ["gradsync/*.py", "gradsync/py.typed"]
