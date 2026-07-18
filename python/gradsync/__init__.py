@@ -23,7 +23,10 @@ from .trainer import (
     Comm,
 )
 
+__version__ = "0.1.0"
+
 __all__ = [
+    "__version__",
     "init_process_group",
     "DistributedDataParallel",
     "all_reduce_grads",
@@ -31,5 +34,3 @@ __all__ = [
     "report_topology",
     "Comm",
 ]
-
-__version__ = "0.1.0"
