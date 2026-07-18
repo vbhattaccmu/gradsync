@@ -2,7 +2,7 @@
 
 **Production-grade multi-GPU data-parallel training over NCCL — Rust core with communication/compute overlap, Python SDK, and one Terraform command to a GPU cluster.**
 
-> A small, readable, open-source demonstration of how modern distributed deep learning actually works. Every line is auditable Rust or plain Python; nothing is hand-waved.
+> A small, auditable, production-ready implementation of data-parallel training. Every line is readable Rust or plain Python; no black boxes.
 
 ## What is this?
 
@@ -21,9 +21,6 @@ It's **not a toy**. It's a minimal production-grade implementation with:
 
 | Use case | Why gradsync | Example |
 |----------|-------------|---------|
-| **Research on collectives** | Full source visible. NCCL wrapper + overlap engine readable. | Study AllReduce batching; measure NVLink bandwidth; test bucket policies. |
-| **Teaching distributed ML** | ~4k LOC Rust, ~2k LOC Python. No PyTorch internals hidden. | "How does gradient averaging work? Read trainer.py. Why does overlap matter? See stream ordering in architecture.md." |
-| **Portfolio / interview prep** | Real systems: Rust FFI, NCCL, CUDA streams, async overlap, IaC. | "I built a multi-node training system from the GPU memory up." |
 | **Custom training frameworks** | Fork and extend. Add ZeRO sharding, pipeline parallelism, etc. | Start with gradsync's overlap engine; bolt on your innovations. |
 | **Production** (small clusters) | Deterministic, auditable, optimized for cost. | Fixed-size clusters (< 64 GPUs) where you control every byte. |
 
@@ -203,7 +200,7 @@ See [docs/architecture.md](docs/architecture.md) for the detailed ordering invar
 
 ## Production readiness checklist
 
-### ✅ Ready now (research / education):
+### ✅ Ready now:
 - Correct CUDA stream ordering (no race conditions).
 - Efficient (bucketed, overlapped, GPU-to-GPU).
 - Auditable (all source included).
@@ -217,8 +214,6 @@ See [docs/architecture.md](docs/architecture.md) for the detailed ordering invar
 - Monitoring / observability (only logs NCCL_DEBUG).
 
 ### Recommended use:
-- ✅ Research prototypes (determinism + source visibility required).
-- ✅ Teaching (simplicity is the point).
 - ✅ Small-to-medium clusters (< 64 GPUs, controlled hardware).
 - ❌ Mission-critical LLM pretraining (1k+ GPUs, fault tolerance required). Use PyTorch DDP or DeepSpeed.
 

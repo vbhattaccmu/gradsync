@@ -1,6 +1,6 @@
 # Contributing to gradsync
 
-Thanks for your interest in improving gradsync! This project prioritizes **readability and correctness** over feature count, so contributions that clarify the code or add rigorous tests are especially welcome.
+Thanks for your interest in improving gradsync! This project prioritizes **correctness and efficiency** over feature count, so contributions that improve reliability or performance are especially welcome.
 
 ## Development setup
 
