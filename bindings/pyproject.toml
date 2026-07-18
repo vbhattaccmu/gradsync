@@ -22,4 +22,5 @@ classifiers = [
 [tool.maturin]
 python-source = "../python"
 module-name = "gradsync._gradsync"
+include = [{ path = "../python/gradsync" }]
 features = ["pyo3/extension-module"]
