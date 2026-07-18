@@ -288,22 +288,47 @@
     <h1>Architecture</h1>
     <p class="intro">gradsync layers systems code (Rust) over an ergonomic Python shell. Nothing is torch-specific.</p>
 
-    <div class="diagram">┌───────────────────────────────────────────────┐
-│  Python SDK  (python/gradsync/)                │
-│    init_process_group()                        │
-│    DistributedDataParallel(model, comm)        │
-│    model.sync_gradients()                      │
-├───────────────────────────────────────────────┤
-│  PyO3 extension  (bindings/) → _gradsync.so    │
-├───────────────────────────────────────────────┤
-│  Rust core  (core/)                            │
-│    • comm.rs        rendezvous + NCCL          │
-│    • collectives.rs AllReduce / Broadcast      │
-│    • topology.rs    hardware detection         │
-│    • nccl.rs        FFI to &lt;nccl.h&gt;            │
-├───────────────────────────────────────────────┤
-│  NCCL + CUDA  (GPU compute + communication)   │
-└───────────────────────────────────────────────┘</div>
+    <svg viewBox="0 0 600 500" style="width: 100%; max-width: 600px; margin: 2rem 0; background: var(--bg-secondary); border-radius: 8px; padding: 20px; border: 1px solid rgba(37, 99, 235, 0.2);">
+      <!-- Python SDK -->
+      <rect x="50" y="20" width="500" height="80" fill="rgba(96, 165, 250, 0.15)" stroke="rgba(96, 165, 250, 0.4)" stroke-width="2" rx="6"/>
+      <text x="60" y="45" font-size="14" font-weight="600" fill="var(--compute)">Python SDK (python/gradsync/)</text>
+      <text x="60" y="65" font-size="12" fill="var(--text-secondary)">init_process_group()  •  DistributedDataParallel(model, comm)  •  model.sync_gradients()</text>
+      <text x="60" y="85" font-size="12" fill="var(--text-secondary)">Communication/compute overlap engine in pure Python</text>
+
+      <!-- Arrow down -->
+      <line x1="300" y1="100" x2="300" y2="130" stroke="rgba(37, 99, 235, 0.3)" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- PyO3 Bindings -->
+      <rect x="50" y="130" width="500" height="60" fill="rgba(251, 191, 36, 0.1)" stroke="rgba(251, 191, 36, 0.3)" stroke-width="2" rx="6"/>
+      <text x="60" y="155" font-size="14" font-weight="600" fill="var(--comm)">PyO3 Extension (bindings/)</text>
+      <text x="60" y="175" font-size="12" fill="var(--text-secondary)">_gradsync.so  •  Comm  •  all_reduce_f32()  •  broadcast_f32()</text>
+
+      <!-- Arrow down -->
+      <line x1="300" y1="190" x2="300" y2="220" stroke="rgba(37, 99, 235, 0.3)" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- Rust Core -->
+      <rect x="50" y="220" width="500" height="120" fill="rgba(37, 99, 235, 0.1)" stroke="rgba(37, 99, 235, 0.4)" stroke-width="2" rx="6"/>
+      <text x="60" y="245" font-size="14" font-weight="600" fill="var(--accent)">Rust Core (core/)</text>
+      <text x="60" y="270" font-size="12" fill="var(--text-secondary)">• comm.rs         Rendezvous + NCCL communicator</text>
+      <text x="60" y="290" font-size="12" fill="var(--text-secondary)">• collectives.rs  AllReduce / Broadcast (group fused ops)</text>
+      <text x="60" y="310" font-size="12" fill="var(--text-secondary)">• topology.rs    Hardware detection (NVLink vs network)</text>
+      <text x="60" y="330" font-size="12" fill="var(--text-secondary)">• nccl.rs         FFI bindings to libnccl</text>
+
+      <!-- Arrow down -->
+      <line x1="300" y1="340" x2="300" y2="370" stroke="rgba(37, 99, 235, 0.3)" stroke-width="2" marker-end="url(#arrowhead)"/>
+
+      <!-- NCCL + CUDA -->
+      <rect x="50" y="370" width="500" height="80" fill="rgba(239, 68, 68, 0.1)" stroke="rgba(239, 68, 68, 0.3)" stroke-width="2" rx="6"/>
+      <text x="60" y="395" font-size="14" font-weight="600" fill="#f87171">NCCL + CUDA (Hardware)</text>
+      <text x="60" y="420" font-size="12" fill="var(--text-secondary)">GPU compute + communication  •  NVLink (intra-node)  •  Network (inter-node)</text>
+
+      <!-- Arrow marker definition -->
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+          <polygon points="0 0, 10 5, 0 10" fill="rgba(37, 99, 235, 0.3)"/>
+        </marker>
+      </defs>
+    </svg>
 
     <h2>How it works</h2>
 
