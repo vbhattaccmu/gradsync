@@ -66,8 +66,8 @@
     body {
       background: var(--bg-primary);
       color: var(--text-primary);
-      padding: 3rem 2rem;
-      line-height: 1.6;
+      padding: 1rem;
+      line-height: 1.5;
     }
 
     .container {
@@ -76,7 +76,7 @@
     }
 
     .header {
-      margin-bottom: 3rem;
+      margin-bottom: 1.5rem;
       text-align: center;
     }
 
@@ -84,48 +84,51 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 1rem;
-      margin-bottom: 1rem;
+      gap: 0.75rem;
+      margin-bottom: 0.5rem;
     }
 
     .logo {
-      width: 48px;
-      height: 48px;
+      width: 40px;
+      height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
     h1 {
-      font-size: 2rem;
+      font-size: 1.5rem;
       font-weight: 600;
-      margin-bottom: 0.5rem;
+      margin: 0;
       letter-spacing: -0.02em;
     }
 
     .subtitle {
       color: var(--text-secondary);
-      font-size: 1rem;
+      font-size: 0.85rem;
       max-width: 600px;
-      margin: 0 auto;
+      margin: 0.5rem auto 0;
     }
 
     .controls {
       display: flex;
       justify-content: center;
-      gap: 1rem;
-      margin-bottom: 2rem;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
     }
 
     button {
-      padding: 0.5rem 1.5rem;
+      padding: 0.5rem 1rem;
       border: 1px solid var(--border);
       background: var(--bg-secondary);
       color: var(--text-primary);
       border-radius: 4px;
       cursor: pointer;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
       transition: all 0.2s;
+      flex: 1;
+      min-width: 80px;
     }
 
     button:hover {
@@ -141,48 +144,45 @@
     .timeline-container {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 2rem;
-      margin-bottom: 2rem;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
     }
 
     .timeline {
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 1.5rem;
+      border-radius: 4px;
+      padding: 1rem;
     }
 
     .timeline-title {
-      font-size: 0.95rem;
+      font-size: 0.85rem;
       font-weight: 600;
-      margin-bottom: 1.5rem;
+      margin-bottom: 1rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-primary);
     }
 
     .timeline-subtitle {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
-      margin-top: 0.25rem;
-      font-weight: 400;
+      display: none;
     }
 
     .phases {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
-      margin-bottom: 1.5rem;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
     }
 
     .phase-group {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.25rem;
     }
 
     .phase-label {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
@@ -191,9 +191,9 @@
 
     .phase-bar {
       display: flex;
-      height: 32px;
+      height: 24px;
       background: var(--bg-primary);
-      border-radius: 3px;
+      border-radius: 2px;
       overflow: hidden;
       border: 1px solid var(--border);
     }
@@ -231,22 +231,24 @@
     .timeline-info {
       display: flex;
       justify-content: space-between;
-      padding: 1rem;
+      padding: 0.75rem;
       background: var(--bg-primary);
-      border-radius: 4px;
+      border-radius: 3px;
       border: 1px solid var(--border);
-      font-size: 0.85rem;
+      font-size: 0.75rem;
+      gap: 0.5rem;
     }
 
     .info-item {
       display: flex;
       flex-direction: column;
-      gap: 0.25rem;
+      gap: 0.15rem;
+      flex: 1;
     }
 
     .info-label {
       color: var(--text-secondary);
-      font-size: 0.75rem;
+      font-size: 0.65rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -255,30 +257,32 @@
       font-family: "Monaco", "Courier New", monospace;
       font-weight: 600;
       color: var(--text-primary);
+      font-size: 0.8rem;
     }
 
     .legend {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 1rem;
-      margin-top: 3rem;
-      padding: 1.5rem;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      padding: 1rem;
       background: var(--bg-secondary);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 4px;
     }
 
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      font-size: 0.9rem;
+      gap: 0.5rem;
+      font-size: 0.8rem;
     }
 
     .legend-box {
-      width: 16px;
-      height: 16px;
+      width: 12px;
+      height: 12px;
       border-radius: 2px;
+      flex-shrink: 0;
     }
 
     .legend-compute { background: var(--compute); }
@@ -286,16 +290,16 @@
     .legend-idle { background: var(--idle); opacity: 0.3; }
 
     .benefit-box {
-      margin-top: 2rem;
-      padding: 1.5rem;
+      margin-top: 1.5rem;
+      padding: 1rem;
       background: var(--compute);
       color: white;
-      border-radius: 6px;
+      border-radius: 4px;
       text-align: center;
     }
 
     .benefit-title {
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       opacity: 0.9;
@@ -303,7 +307,7 @@
     }
 
     .benefit-value {
-      font-size: 2rem;
+      font-size: 1.75rem;
       font-weight: 600;
       font-family: "Monaco", "Courier New", monospace;
     }
@@ -311,19 +315,72 @@
     @media (max-width: 768px) {
       .timeline-container {
         grid-template-columns: 1fr;
-        gap: 1rem;
+        gap: 0.75rem;
       }
 
       h1 {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
+      }
+
+      .logo {
+        width: 36px;
+        height: 36px;
+      }
+
+      .logo-container {
+        gap: 0.5rem;
       }
 
       .legend {
         grid-template-columns: 1fr;
+        gap: 0.5rem;
       }
 
+      button {
+        min-width: 70px;
+        padding: 0.45rem 0.8rem;
+        font-size: 0.75rem;
+      }
+    }
+
+    @media (max-width: 480px) {
       body {
-        padding: 1.5rem 1rem;
+        padding: 0.75rem;
+      }
+
+      .header {
+        margin-bottom: 1rem;
+      }
+
+      h1 {
+        font-size: 1.2rem;
+      }
+
+      .subtitle {
+        font-size: 0.8rem;
+      }
+
+      .controls {
+        gap: 0.4rem;
+        margin-bottom: 0.75rem;
+      }
+
+      button {
+        min-width: 60px;
+        padding: 0.4rem 0.6rem;
+        font-size: 0.7rem;
+      }
+
+      .timeline {
+        padding: 0.75rem;
+      }
+
+      .phase-bar {
+        height: 20px;
+      }
+
+      .benefit-value {
+        font-size: 1.5rem;
       }
     }
 
@@ -340,23 +397,16 @@
       <div class="logo-container">
         <div class="logo">
           <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-            <!-- Left compute stream (blue) -->
             <rect x="8" y="8" width="12" height="28" rx="2" fill="var(--compute)" opacity="0.9"/>
-
-            <!-- Right communication stream (amber) overlapping -->
             <rect x="28" y="12" width="12" height="24" rx="2" fill="var(--comm)" opacity="0.8"/>
-
-            <!-- Center overlap indicator (showing hidden communication) -->
             <circle cx="24" cy="24" r="3" fill="var(--text-primary)" opacity="0.4"/>
-
-            <!-- Flow arrows -->
             <path d="M 14 38 L 20 42 L 14 42 Z" fill="var(--compute)" opacity="0.6"/>
             <path d="M 34 38 L 40 42 L 34 42 Z" fill="var(--comm)" opacity="0.6"/>
           </svg>
         </div>
         <h1>gradsync</h1>
       </div>
-      <p class="subtitle">How overlapping gradient reduction with backward compute reduces training step latency by 30–50%</p>
+      <p class="subtitle">Communication/compute overlap in DDP training</p>
     </div>
 
     <div class="controls">
@@ -368,30 +418,27 @@
     <div class="timeline-container">
       <!-- Naive approach -->
       <div class="timeline">
-        <div>
-          <div class="timeline-title">Naive DDP</div>
-          <div class="timeline-subtitle">Sequential phases — communication blocks compute</div>
-        </div>
+        <div class="timeline-title">Naive DDP</div>
 
         <div class="phases">
           <div class="phase-group">
-            <div class="phase-label">Backward pass (GPU compute)</div>
+            <div class="phase-label">Backward</div>
             <div class="phase-bar">
-              <div class="phase-segment segment-compute" id="naive-backward" style="width: 0%">30%</div>
+              <div class="phase-segment segment-compute" id="naive-backward" style="width: 0%"></div>
             </div>
           </div>
 
           <div class="phase-group">
-            <div class="phase-label">AllReduce (communication)</div>
+            <div class="phase-label">AllReduce</div>
             <div class="phase-bar">
-              <div class="phase-segment segment-comm" id="naive-allreduce" style="width: 0%">20%</div>
+              <div class="phase-segment segment-comm" id="naive-allreduce" style="width: 0%"></div>
             </div>
           </div>
 
           <div class="phase-group">
-            <div class="phase-label">Optimizer step</div>
+            <div class="phase-label">Step</div>
             <div class="phase-bar">
-              <div class="phase-segment segment-compute" id="naive-step" style="width: 0%">10%</div>
+              <div class="phase-segment segment-compute" id="naive-step" style="width: 0%"></div>
             </div>
           </div>
         </div>
@@ -410,25 +457,22 @@
 
       <!-- gradsync approach -->
       <div class="timeline">
-        <div>
-          <div class="timeline-title">gradsync (Overlapped)</div>
-          <div class="timeline-subtitle">Backward + AllReduce in parallel on separate GPU streams</div>
-        </div>
+        <div class="timeline-title">gradsync (Overlapped)</div>
 
         <div class="phases">
           <div class="phase-group">
-            <div class="phase-label">Backward + AllReduce (parallel)</div>
+            <div class="phase-label">Backward + AllReduce</div>
             <div class="phase-bar">
-              <div class="phase-segment segment-compute" id="overlap-backward" style="width: 0%">30%</div>
-              <div class="phase-segment segment-comm" id="overlap-allreduce" style="width: 0%">15%</div>
-              <div class="phase-segment segment-hidden" id="overlap-hidden" style="width: 0%">5%</div>
+              <div class="phase-segment segment-compute" id="overlap-backward" style="width: 0%"></div>
+              <div class="phase-segment segment-comm" id="overlap-allreduce" style="width: 0%"></div>
+              <div class="phase-segment segment-hidden" id="overlap-hidden" style="width: 0%"></div>
             </div>
           </div>
 
           <div class="phase-group">
-            <div class="phase-label">Optimizer step</div>
+            <div class="phase-label">Step</div>
             <div class="phase-bar">
-              <div class="phase-segment segment-compute" id="overlap-step" style="width: 0%">10%</div>
+              <div class="phase-segment segment-compute" id="overlap-step" style="width: 0%"></div>
             </div>
           </div>
         </div>
@@ -449,20 +493,20 @@
     <div class="legend">
       <div class="legend-item">
         <div class="legend-box legend-compute"></div>
-        <span>GPU Compute (backward)</span>
+        <span>Compute</span>
       </div>
       <div class="legend-item">
         <div class="legend-box legend-comm"></div>
-        <span>Communication (AllReduce)</span>
+        <span>Communication</span>
       </div>
       <div class="legend-item">
         <div class="legend-box legend-idle"></div>
-        <span>Idle (waiting)</span>
+        <span>Idle</span>
       </div>
     </div>
 
     <div class="benefit-box">
-      <div class="benefit-title">Step time reduction with overlap</div>
+      <div class="benefit-title">Speedup</div>
       <div class="benefit-value" id="benefit">—</div>
     </div>
   </div>
