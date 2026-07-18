@@ -111,7 +111,7 @@ terraform destroy
 
 ## How communication/compute overlap works
 
-**📊 [Interactive visualization](docs/overlap-animation.html)** — Play the animation to see naive vs. overlapped approach side-by-side, with real timing.
+**📊 [Interactive visualization](https://vbhattaccmu.github.io/gradsync/docs/overlap-animation.html)** — Play the animation to see naive vs. overlapped approach side-by-side, with real timing.
 
 **Naive DDP (what most tutorials show):**
 ```
